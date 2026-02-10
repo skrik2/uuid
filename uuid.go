@@ -3,8 +3,7 @@
 package uuid
 
 import (
-	"database/sql/driver"
-	"fmt"
+	"encoding/binary"
 	"time"
 	"unsafe"
 )
@@ -27,8 +26,7 @@ const (
 // NilUUID is the nil UUID, as specified in RFC-9562, that has all 128 bits set to zero.
 var NilUUID = UUID{}
 
-// Max is the maximum UUID, as specified in RFC-9562, that has all 128 bits
-// set to one.
+// Max is the maximum UUID, as specified in RFC-9562, that has all 128 bits set to one.
 var Max = UUID{
 	0xFF,
 	0xFF,
@@ -60,7 +58,7 @@ func NewV4() (UUID, error) {
 	return defaultGen.NewV4()
 }
 
-func NewV7() (UUID, error)
+// func NewV7() (UUID, error)
 
 // NewV7Lazy generates a V7 UUID with a 48-bit Unix millisecond timestamp
 // and a fully random tail. This version does not guarantee monotonicity
@@ -96,16 +94,6 @@ func MustUUID(u UUID, err error) UUID {
 	}
 	return u
 }
-func FromBytes(input []byte) (UUID, error)
-func FromBytesOrNil(input []byte) UUID
-
-func FromString(input string) (UUID, error)
-
-// Parse parses the UUID stored in the string text. Parsing
-// and supported formats are the same as UnmarshalText.
-func (u *UUID) Parse(s string) error
-
-func FromStringOrNil(input string) UUID
 
 var hexTable = func() [256][2]byte {
 	var t [256][2]byte
@@ -157,58 +145,58 @@ func (u UUID) String() string {
 	return unsafe.String(&buf[0], 36)
 }
 
-// Bytes returns a newly allocated byte slice containing the UUID.
-// Modifying the returned slice will NOT affect the original UUID.
-func (u UUID) Bytes() []byte {
-	b := make([]byte, 16)
-	copy(b, u[:])
-	return b
-}
-
-// AsSlice returns a byte slice referencing the underlying UUID array.
-// Modifying the returned slice WILL modify the UUID itself.
-func (u *UUID) AsSlice() []byte {
-	return u[:]
-}
-
-// Format implements fmt.Formatter for UUID values.
-// The behavior is as follows: The 'x' and 'X' verbs output only the hex digits of the UUID,
-// using a-f for 'x' and A-F for 'X'. The 'v', '+v', 's' and 'q' verbs return the canonical RFC-9562 string
-// representation. The 'S' verb returns the RFC-9562 format, but with capital hex digits. The '#v' verb returns
-// the "Go syntax" representation, which is a 16 byte array initializer. All other verbs not handled directly by the
-// fmt package (like '%p') are unsupported and will return "%!verb(uuid.UUID=value)" as recommended by the fmt package.
-func (u UUID) Format(f fmt.State, c rune)
-
 // IsNilUUID returns if the UUID is equal to the nil UUID
 func (u UUID) IsNilUUID() bool {
 	return u == NilUUID
 }
 
-func (u UUID) Equal(another UUID) bool
+// Equal returns true if this UUID equals another UUID by value.
+func (u *UUID) Equal(another *UUID) bool {
+	if u == another {
+		return true
+	}
 
-func (u UUID) Compare(v UUID) int
+	if u == nil || another == nil {
+		return false
+	}
 
-func (u UUID) Time() time.Time // only V7
+	return *u == *another
+}
 
-// MarshalBinary implements the encoding.BinaryMarshaler interface.
-func (u UUID) MarshalBinary() ([]byte, error)
+func (u UUID) Compare(v UUID) int {
+	uHi := binary.BigEndian.Uint64(u[0:8])
+	vHi := binary.BigEndian.Uint64(v[0:8])
 
-// UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
-// It will return an error if the slice isn't 16 bytes long.
-func (u *UUID) UnmarshalBinary(data []byte) error
+	if uHi < vHi {
+		return -1
+	}
+	if uHi > vHi {
+		return 1
+	}
 
-// MarshalText implements the encoding.TextMarshaler interface.
-// The encoding is the same as returned by the String() method.
-func (u UUID) MarshalText() ([]byte, error)
+	uLo := binary.BigEndian.Uint64(u[8:16])
+	vLo := binary.BigEndian.Uint64(v[8:16])
 
-func (u *UUID) UnmarshalText(b []byte) error
+	if uLo < vLo {
+		return -1
+	}
+	if uLo > vLo {
+		return 1
+	}
 
-// Value implements the driver.Valuer interface.
-func (u UUID) Value() (driver.Value, error)
+	return 0
+}
 
-// Scan implements the sql.Scanner interface. A 16-byte slice will be handled by UnmarshalBinary,
-// while a longer byte slice or a string will be handled by UnmarshalText.
-func (u *UUID) Scan(src interface{}) error
+// Milliseconds 直接提取 UUIDv7 前 48 位时间戳并返回毫秒数。
+func (u UUID) Milliseconds() int64 {
+	hi := binary.BigEndian.Uint64(u[0:8])
+	return int64(hi >> 16)
+}
+
+// Time 返回 UUIDv7 的时间戳对象。
+func (u UUID) Time() time.Time {
+	return time.UnixMilli(u.Milliseconds())
+}
 
 // Variant returns the UUID layout variant.
 func (u UUID) Variant() byte {
