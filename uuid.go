@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
+	"unsafe"
 )
 
 type UUID [16]byte
@@ -106,33 +107,54 @@ func (u *UUID) Parse(s string) error
 
 func FromStringOrNil(input string) UUID
 
-// encodeCanonical encodes the canonical RFC-9562 form of UUID u into the
-// first 36 bytes dst.
-func encodeCanonical(dst []byte, u UUID) {
-	const hextable = "0123456789abcdef"
-	dst[8] = '-'
-	dst[13] = '-'
-	dst[18] = '-'
-	dst[23] = '-'
-	for i, x := range [16]byte{
-		0, 2, 4, 6,
-		9, 11,
-		14, 16,
-		19, 21,
-		24, 26, 28, 30, 32, 34,
-	} {
-		c := u[i]
-		dst[x] = hextable[c>>4]
-		dst[x+1] = hextable[c&0x0f]
+var hexTable = func() [256][2]byte {
+	var t [256][2]byte
+	const digits = "0123456789abcdef"
+	for i := range 256 {
+		t[i][0] = digits[i>>4]
+		t[i][1] = digits[i&0x0f]
 	}
-}
+	return t
+}()
 
-// String returns a canonical RFC-9562 string representation of the
-// UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
 func (u UUID) String() string {
-	var buf [36]byte
-	encodeCanonical(buf[:], u)
-	return string(buf[:])
+	buf := make([]byte, 36)
+	buf[8], buf[13], buf[18], buf[23] = '-', '-', '-', '-'
+
+	t := hexTable[u[0]]
+	buf[0], buf[1] = t[0], t[1]
+	t = hexTable[u[1]]
+	buf[2], buf[3] = t[0], t[1]
+	t = hexTable[u[2]]
+	buf[4], buf[5] = t[0], t[1]
+	t = hexTable[u[3]]
+	buf[6], buf[7] = t[0], t[1]
+	t = hexTable[u[4]]
+	buf[9], buf[10] = t[0], t[1]
+	t = hexTable[u[5]]
+	buf[11], buf[12] = t[0], t[1]
+	t = hexTable[u[6]]
+	buf[14], buf[15] = t[0], t[1]
+	t = hexTable[u[7]]
+	buf[16], buf[17] = t[0], t[1]
+	t = hexTable[u[8]]
+	buf[19], buf[20] = t[0], t[1]
+	t = hexTable[u[9]]
+	buf[21], buf[22] = t[0], t[1]
+	t = hexTable[u[10]]
+	buf[24], buf[25] = t[0], t[1]
+	t = hexTable[u[11]]
+	buf[26], buf[27] = t[0], t[1]
+	t = hexTable[u[12]]
+	buf[28], buf[29] = t[0], t[1]
+	t = hexTable[u[13]]
+	buf[30], buf[31] = t[0], t[1]
+	t = hexTable[u[14]]
+	buf[32], buf[33] = t[0], t[1]
+	t = hexTable[u[15]]
+	buf[34], buf[35] = t[0], t[1]
+
+	return unsafe.String(&buf[0], 36)
 }
 
 // Bytes returns a newly allocated byte slice containing the UUID.
