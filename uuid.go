@@ -71,8 +71,8 @@ func NewV4() (UUID, error) {
 //	52..63  rand_a
 //	64..65  variant
 //	66..127 rand_b
-func NewV7Lazy() (UUID, error) {
-	return defaultGen.NewV7Lazy()
+func NewV7() (UUID, error) {
+	return defaultGen.NewV7()
 }
 
 // func NewV4Rand(rand io.Reader) UUID
