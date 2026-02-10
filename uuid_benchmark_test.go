@@ -12,3 +12,12 @@ func BenchmarkString(b *testing.B) {
 		_ = testUUID.String()
 	}
 }
+
+func BenchmarkAppendTo(b *testing.B) {
+	u, _ := defaultGen.NewV7()
+	buf := make([]byte, 36)
+
+	for b.Loop() {
+		_ = u.Encode(buf)
+	}
+}

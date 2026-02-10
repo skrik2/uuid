@@ -145,6 +145,52 @@ func (u UUID) String() string {
 	return unsafe.String(&buf[0], 36)
 }
 
+// Encode serializes the UUID into the canonical 36-character string format (RFC 9562)
+// and writes it into the provided buffer.
+//
+// WARNING: This function does NOT perform length checks on the provided buffer for
+// performance reasons. The caller MUST ensure that len(buf) >= 36 to avoid a panic.
+func (u UUID) Encode(buf []byte) []byte {
+	_ = buf[35]
+
+	buf[8], buf[13], buf[18], buf[23] = '-', '-', '-', '-'
+
+	t := hexTable[u[0]]
+	buf[0], buf[1] = t[0], t[1]
+	t = hexTable[u[1]]
+	buf[2], buf[3] = t[0], t[1]
+	t = hexTable[u[2]]
+	buf[4], buf[5] = t[0], t[1]
+	t = hexTable[u[3]]
+	buf[6], buf[7] = t[0], t[1]
+	t = hexTable[u[4]]
+	buf[9], buf[10] = t[0], t[1]
+	t = hexTable[u[5]]
+	buf[11], buf[12] = t[0], t[1]
+	t = hexTable[u[6]]
+	buf[14], buf[15] = t[0], t[1]
+	t = hexTable[u[7]]
+	buf[16], buf[17] = t[0], t[1]
+	t = hexTable[u[8]]
+	buf[19], buf[20] = t[0], t[1]
+	t = hexTable[u[9]]
+	buf[21], buf[22] = t[0], t[1]
+	t = hexTable[u[10]]
+	buf[24], buf[25] = t[0], t[1]
+	t = hexTable[u[11]]
+	buf[26], buf[27] = t[0], t[1]
+	t = hexTable[u[12]]
+	buf[28], buf[29] = t[0], t[1]
+	t = hexTable[u[13]]
+	buf[30], buf[31] = t[0], t[1]
+	t = hexTable[u[14]]
+	buf[32], buf[33] = t[0], t[1]
+	t = hexTable[u[15]]
+	buf[34], buf[35] = t[0], t[1]
+
+	return buf
+}
+
 // IsNilUUID returns if the UUID is equal to the nil UUID
 func (u UUID) IsNilUUID() bool {
 	return u == NilUUID
